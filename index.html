@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulateur — Réforme fiscale</title>
+<style>
+  :root{
+    --ink:#1B2A44;
+    --paper:#F6F3EC;
+    --paper-line:#DDD6C4;
+    --gain:#7A6A2F;
+    --gain-bg:#EFE9D3;
+    --loss:#8C3B2E;
+    --loss-bg:#F3E2DD;
+    --muted:#6B7280;
+    --accent:#C08A2E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:920px;
+    margin:0 auto;
+    padding:48px 24px 80px;
+  }
+  .notice-banner{
+    background:var(--ink);
+    color:#F6F3EC;
+    font-size:12.5px;
+    text-align:center;
+    padding:9px 16px;
+    border-radius:2px;
+    margin-bottom:28px;
+    letter-spacing:0.02em;
+  }
+  .masthead{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:18px;
+    margin-bottom:6px;
+  }
+  .masthead .label{
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  h1{
+    font-family:Georgia,'Times New Roman',serif;
+    font-weight:600;
+    font-size:clamp(28px,4.5vw,42px);
+    line-height:1.05;
+    margin:22px 0 6px;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    font-size:15px;
+    color:var(--muted);
+    max-width:56ch;
+    margin:0 0 40px;
+    line-height:1.5;
+  }
+  .panel{
+    background:#fff;
+    border:1px solid var(--paper-line);
+    border-radius:2px;
+    padding:28px;
+    margin-bottom:24px;
+  }
+  .panel-title{
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 20px;
+  }
+  fieldset{border:none;padding:0;margin:0 0 22px;}
+  legend{
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:10px;
+    padding:0;
+  }
+  .seg{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .seg button{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px;
+    padding:9px 16px;
+    border:1px solid var(--paper-line);
+    background:#fff;
+    color:var(--ink);
+    border-radius:20px;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .seg button:hover{border-color:var(--ink);}
+  .seg button.active{
+    background:var(--ink);
+    color:#fff;
+    border-color:var(--ink);
+  }
+  .stepper{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .stepper button{
+    width:36px;height:36px;
+    border-radius:50%;
+    border:1px solid var(--ink);
+    background:#fff;
+    font-size:18px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .stepper button:disabled{opacity:0.3;cursor:default;}
+  .stepper .count{
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:18px;
+    min-width:24px;
+    text-align:center;
+  }
+  .stepper .note{font-size:12px;color:var(--muted);margin-left:6px;}
+  .revenu-row{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .revenu-value{
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:26px;
+    font-weight:500;
+    font-variant-numeric:tabular-nums;
+  }
+  input[type=range]{
+    width:100%;
+    -webkit-appearance:none;
+    height:4px;
+    background:var(--paper-line);
+    border-radius:2px;
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--ink);
+    cursor:pointer;
+    border:3px solid #fff;
+    box-shadow:0 0 0 1px var(--ink);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--ink);
+    cursor:pointer;
+    border:3px solid #fff;
+    box-shadow:0 0 0 1px var(--ink);
+  }
+  .ticks{
+    display:flex;justify-content:space-between;
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:10px;color:var(--muted);
+    margin-top:6px;
+  }
+  .aides-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  .aide-field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .aide-field span{
+    font-size:12px;
+    color:var(--muted);
+  }
+  .aide-field input[type=number]{
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:16px;
+    padding:10px 12px;
+    border:1px solid var(--paper-line);
+    border-radius:2px;
+    background:var(--paper);
+    color:var(--ink);
+    width:100%;
+  }
+  .aide-field input[type=number]:focus{
+    outline:none;
+    border-color:var(--ink);
+  }
+  .field-hint{
+    font-size:12px;
+    color:var(--muted);
+    margin:10px 0 0;
+    line-height:1.5;
+  }
+  .toggle-btn{
+    position:relative;
+  }
+  .toggle-btn.active::before{
+    content:'✓ ';
+  }
+  @media (max-width:480px){
+    .aides-grid{grid-template-columns:1fr;}
+  }
+
+  /* Résultat */
+  .result-panel{
+    background:var(--ink);
+    color:#F6F3EC;
+    border-radius:2px;
+    padding:32px 28px;
+  }
+  .result-title{
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:#B9C2D6;
+    margin:0 0 22px;
+  }
+  .ledger{
+    display:grid;
+    grid-template-columns:1fr auto;
+    row-gap:10px;
+    column-gap:24px;
+    font-size:14px;
+    padding-bottom:18px;
+    border-bottom:1px dashed #45527A;
+  }
+  .ledger .amt{
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+    text-align:right;
+  }
+  .ledger .dim{color:#9AA6C4;}
+  .balance{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding-top:20px;
+  }
+  .balance-label{
+    font-family:Georgia,'Times New Roman',serif;
+    font-size:17px;
+  }
+  .balance-amt{
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:34px;
+    font-weight:500;
+    font-variant-numeric:tabular-nums;
+  }
+  .balance-amt.gain{color:#E4D9A0;}
+  .balance-amt.loss{color:#E8AFA0;}
+
+  .beam-wrap{
+    margin-top:26px;
+    padding-top:22px;
+    border-top:1px solid #33406A;
+  }
+  .beam-track{
+    position:relative;
+    height:6px;
+    background:#2A3559;
+    border-radius:3px;
+    margin:18px 0 8px;
+    overflow:visible;
+  }
+  .beam-mid{
+    position:absolute;
+    left:50%;top:-9px;
+    width:1px;height:24px;
+    background:#5A6690;
+  }
+  .beam-fill{
+    position:absolute;
+    top:0;height:6px;
+    background:linear-gradient(90deg,#8C3B2E,#C08A2E);
+    border-radius:3px;
+    transition:all .25s ease;
+  }
+  .beam-dot{
+    position:absolute;
+    top:-6px;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:#F6F3EC;
+    border:3px solid var(--ink);
+    transform:translateX(-50%);
+    transition:all .25s ease;
+  }
+  .beam-labels{
+    display:flex;justify-content:space-between;
+    font-family:ui-monospace,'SF Mono','Cascadia Mono','Segoe UI Mono',Menlo,Consolas,monospace;
+    font-size:10px;color:#9AA6C4;
+  }
+
+  .foot-note{
+    font-size:12px;
+    color:#9AA6C4;
+    line-height:1.6;
+    margin-top:22px;
+  }
+
+  .garantie-cta{
+    margin-top:16px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink);
+    background:#E4D9BE;
+    border-left:4px solid var(--accent);
+    padding:12px 16px;
+    border-radius:2px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .garantie-btn{
+    background:var(--accent);
+    border:none;
+    color:#fff;
+    padding:8px 16px;
+    border-radius:2px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .garantie-btn:hover{filter:brightness(1.1);}
+  .garantie-panel{
+    margin-top:2px;
+    background:#F6F3EC;
+    border-left:4px solid var(--accent);
+    padding:16px;
+    border-radius:0 0 2px 2px;
+    color:#333;
+  }
+  .garantie-panel-text{margin:0 0 14px;font-size:13px;line-height:1.6;color:#333;}
+  .garantie-panel .seg button{color:#333;border-color:#ccc;background:#fff;}
+  .garantie-panel .seg button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .foot-note b{color:#F6F3EC;}
+
+  @media (max-width:600px){
+    .wrap{padding:32px 16px 60px;}
+    .panel{padding:20px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="notice-banner">Simulation indicative et non officielle — aucun montant saisi ne quitte votre navigateur.</div>
+
+  <div class="masthead">
+    <span class="label">Simulateur — foyer fiscal</span>
+    <span class="label" id="dateLabel"></span>
+  </div>
+
+  <h1>Ce que le dispositif change<br>pour votre foyer</h1>
+  <p class="sub">Comparaison entre le système actuel (impôt avec quotient familial et décote, plus vos aides déclarées) et le nouveau dispositif (socle universel + impôt progressif continu + TVA unique à 25 %), avec ses mécanismes de protection : clause de garantie et complément logement. Estimation indicative.</p>
+
+  <div class="panel">
+    <p class="panel-title">01 — Votre foyer</p>
+
+    <fieldset>
+      <legend>Situation</legend>
+      <div class="seg" id="situationSeg">
+        <button data-val="celibataire" class="active">Célibataire</button>
+        <button data-val="couple">Couple</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Enfants à charge</legend>
+      <div class="stepper">
+        <button id="dec">−</button>
+        <span class="count" id="enfantsCount">0</span>
+        <button id="inc">+</button>
+        <span class="note">Détermine votre nombre de parts fiscales</span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Revenu net imposable du foyer (annuel)</legend>
+      <div class="revenu-row">
+        <span class="revenu-value" id="revenuValue">30 000 €</span>
+      </div>
+      <input type="range" id="revenuSlider" min="0" max="300000" step="500" value="30000">
+      <div class="ticks">
+        <span>0 €</span><span>75 000 €</span><span>150 000 €</span><span>225 000 €</span><span>300 000 €</span>
+      </div>
+    </fieldset>
+
+    <fieldset style="margin-bottom:0;">
+      <legend>Vos aides actuelles (montants réels, si vous les connaissez)</legend>
+      <div class="aides-grid">
+        <label class="aide-field">
+          <span>Allocations familiales — €/mois (préremplies, modifiables)</span>
+          <input type="number" id="afInput" min="0" step="10" value="0" inputmode="decimal">
+        </label>
+        <label class="aide-field">
+          <span>Prime d'activité — €/mois (≈ estimation, modifiable)</span>
+          <input type="number" id="paInput" min="0" step="10" value="0" inputmode="decimal">
+        </label>
+        <label class="aide-field">
+          <span>APL / aide au logement — €/mois (à saisir vous-même)</span>
+          <input type="number" id="aplInput" min="0" step="10" value="0" inputmode="decimal">
+        </label>
+        <label class="aide-field">
+          <span>RSA — €/mois (prérempli, modifiable)</span>
+          <input type="number" id="rsaInput" min="0" step="10" value="0" inputmode="decimal">
+        </label>
+      </div>
+      <p class="field-hint">Les allocations familiales et le RSA sont précalculés selon les barèmes officiels ; la Prime d'activité est une estimation (hypothèse : un seul revenu dans le foyer). Corrigez-les avec vos montants réels si vous les connaissez. L'APL, qui dépend de votre loyer et de votre ville, doit être saisie manuellement — la renseigner ajuste automatiquement le RSA et la Prime d'activité estimés (forfait logement).</p>
+    </fieldset>
+  </div>
+
+  <div class="result-panel">
+    <p class="result-title">02 — Résultat</p>
+
+    <div class="ledger">
+      <span class="dim">Impôt sur le revenu actuel (barème + décote)</span>
+      <span class="amt" id="impotActuel">—</span>
+      <span class="dim">Allocations familiales déclarées</span>
+      <span class="amt" id="afActuel">—</span>
+      <span class="dim">Prime d'activité déclarée</span>
+      <span class="amt" id="paActuel">—</span>
+      <span class="dim">APL déclarée</span>
+      <span class="amt" id="aplActuel">—</span>
+      <span class="dim">RSA déclaré</span>
+      <span class="amt" id="rsaActuel">—</span>
+      <span>Solde net — système actuel</span>
+      <span class="amt" id="soldeActuel">—</span>
+    </div>
+
+    <div class="ledger" style="border-bottom:none;padding-top:14px;">
+      <span class="dim">Socle universel (12 000 € par adulte déclarant)</span>
+      <span class="amt" id="socleDispositif">—</span>
+      <span class="dim">Impôt à 10 tranches (dès le 1er euro, quotient familial, CSG déductible)</span>
+      <span class="amt" id="impotDispositif">—</span>
+      <span class="dim">Surcoût TVA estimé (taux unique 25 %)</span>
+      <span class="amt" id="tvaDispositif">—</span>
+      <span class="dim" id="garantieLabel">Clause de garantie</span>
+      <span class="amt" id="garantieDispositif">—</span>
+      <span>Solde net — nouveau dispositif</span>
+      <span class="amt" id="soldeDispositif">—</span>
+    </div>
+
+    <div class="balance">
+      <span class="balance-label">Gain net annuel</span>
+      <span class="balance-amt" id="gainNet">—</span>
+    </div>
+
+    <div class="garantie-cta">
+      <span>Si votre gain net est égal ou inférieur à la somme de vos aides actuelles, vous bénéficiez de la clause de garantie dégressive.</span>
+      <button id="garantieBtn" class="garantie-btn">En savoir plus</button>
+    </div>
+
+    <div id="garantiePanel" class="garantie-panel" style="display:none;">
+      <p class="garantie-panel-text">La clause de garantie comble intégralement toute perte en année 1, puis diminue de 20 % par an, afin d'inciter à la reprise d'activité, même partielle. Choisissez l'année de la transition à simuler :</p>
+      <div class="seg" id="anneeSeg">
+        <button data-annee="1" class="active">Année 1</button>
+        <button data-annee="2">Année 2</button>
+        <button data-annee="3">Année 3</button>
+        <button data-annee="4">Année 4</button>
+        <button data-annee="5">Année 5</button>
+      </div>
+      <div class="seg" style="margin-top:12px;">
+        <button id="structToggle" class="toggle-btn">Situation structurelle reconnue</button>
+      </div>
+      <p class="garantie-panel-text" style="margin:10px 0 0;font-size:12.5px;">« Situation structurelle » : invalidité reconnue, affection de longue durée, aidant familial, senior sans droits complets, parent isolé en situation de précarité... La clause de garantie est alors maintenue sans dégressivité.</p>
+    </div>
+
+    <div class="beam-wrap">
+      <div class="beam-track">
+        <div class="beam-mid"></div>
+        <div class="beam-fill" id="beamFill"></div>
+        <div class="beam-dot" id="beamDot"></div>
+      </div>
+      <div class="beam-labels">
+        <span>Perd davantage</span>
+        <span>Équilibre</span>
+        <span>Gagne davantage</span>
+      </div>
+    </div>
+
+    <p class="foot-note">
+      <b>Hypothèses du dispositif :</b> socle individuel de 12 000 €/an par adulte disposant d'une déclaration fiscale autonome (24 000 € pour un couple) · TVA à taux unique de 25 % (surcoût proportionnel à la consommation estimée du foyer : revenu disponible × taux de consommation par niveau de vie × 6,5 % de différentiel moyen — il croît donc avec le revenu, contrairement à un forfait) · impôt à 10 tranches dès le premier euro (6 %-11 %-16 %-31 %-32 %-33 %-42 %-46 %-48 %-50 %), calibré pour que le gain net ne croisse jamais avec le revenu, quotient familial conservé avec avantage conjugal plafonné à 4 000 €/an · CSG-CRDS rendue intégralement déductible (fin de l'impôt sur l'impôt) · IFI et CEHR supprimés, PFU sur les revenus du capital porté à 35 % (non simulé ici — ce simulateur porte sur les revenus soumis au barème). <b>Non simulée également :</b> la hausse de salaire issue de la conversion de la cotisation patronale famille (≈ +800 € nets/an pour un salarié à 2 500 € bruts) — pour les salariés, le gain affiché est donc une estimation basse.<br>
+      <b>Protections intégrées :</b> la <b>clause de garantie</b> comble toute perte par rapport au système actuel — intégralement en année 1, puis −20 % par an jusqu'à extinction en année 6, sauf situation structurelle reconnue (invalidité, ALD, aidant, senior sans droits complets) où elle est maintenue sans limite. Le <b>complément logement</b> couvre en permanence la part APL de la perte pour les locataires en zone tendue.
+    </p>
+  </div>
+
+</div>
+
+<script>
+const fmt = n => (n<0?'−':'') + Math.round(Math.abs(n)).toLocaleString('fr-FR') + ' €';
+
+let state = { situation:'celibataire', enfants:0, revenu:30000, afMensuel:0, paMensuel:0, aplMensuel:0, rsaMensuel:0,
+              zoneTendue:false, structurel:false, etranger:false, annee:1 };
+
+// --- barème progressif standard (identique dans les deux systèmes) ---
+const bareme = [
+  {seuil:0, taux:0},
+  {seuil:11600, taux:0.11},
+  {seuil:29579, taux:0.30},
+  {seuil:84577, taux:0.41},
+  {seuil:181917, taux:0.45}
+];
+function impotBareme(x){
+  let impot = 0;
+  for(let i=0;i<bareme.length;i++){
+    const seuil = bareme[i].seuil;
+    const seuilSup = (i<bareme.length-1) ? bareme[i+1].seuil : Infinity;
+    if(x > seuil){
+      impot += (Math.min(x,seuilSup) - seuil) * bareme[i].taux;
+    }
+  }
+  return impot;
+}
+
+// --- parts fiscales (système actuel) ---
+function parts(situation, enfants){
+  let base = situation === 'couple' ? 2 : 1;
+  let ep = 0;
+  for(let i=1;i<=enfants;i++) ep += (i<=2) ? 0.5 : 1;
+  return base + ep;
+}
+
+// --- décote ---
+function decote(impotBrut, situation){
+  const estCouple = situation === 'couple';
+  const seuil = estCouple ? 3248 : 1965;
+  const base = estCouple ? 1470 : 889;
+  if(impotBrut >= seuil) return 0;
+  return Math.max(0, base - 0.4525*impotBrut);
+}
+
+// --- allocations familiales (approx, taux plein / T2 / T3) ---
+function allocationsFamiliales(revenu, enfants){
+  if(enfants < 2) return 0;
+  const tables = {
+    2: {mensuel:142, s1:71734, s2:85754},
+    3: {mensuel:324, s1:78497, s2:92517}
+  };
+  let mensuel;
+  if(enfants <= 3){
+    const t = tables[enfants];
+    if(revenu <= t.s1) mensuel = t.mensuel;
+    else if(revenu <= t.s2) mensuel = t.mensuel/2;
+    else mensuel = t.mensuel/4;
+  } else {
+    // au-delà de 3 enfants : base 3 enfants + 182€/enfant supp., même logique de tranche
+    const t = tables[3];
+    const supp = (enfants-3) * 182;
+    let base = revenu <= t.s1 ? (t.mensuel+supp) : revenu <= t.s2 ? (t.mensuel+supp)/2 : (t.mensuel+supp)/4;
+    mensuel = base;
+  }
+  return mensuel * 12;
+}
+
+// --- système actuel : solde net (positif = reçoit, négatif = paie) ---
+function systemeActuel(revenu, situation, enfants, afAnnuel, paAnnuel, aplAnnuel, rsaAnnuel){
+  const nbParts = parts(situation, enfants);
+  const parPart = revenu / nbParts;
+  const impotParPart = impotBareme(parPart);
+  const impotBrut = impotParPart * nbParts;
+  const dec = decote(impotBrut, situation);
+  const impotNet = Math.max(0, impotBrut - dec);
+  return { impotNet, af:afAnnuel, pa:paAnnuel, apl:aplAnnuel, rsa:rsaAnnuel,
+           solde: afAnnuel + paAnnuel + aplAnnuel + rsaAnnuel - impotNet };
+}
+
+// --- dispositif : socle INDIVIDUEL (12 000 € par adulte déclarant)
+//     + barème à 10 tranches dès le premier euro (plafond 49 %)
+//     + quotient familial conservé + CSG-CRDS intégralement déductible ---
+const SOCLE_PAR_ADULTE = 12000;
+const PLAFOND_QUOTIENT_CONJUGAL = 4000; // €/an d'avantage maximal
+const TRANCHES_DISPOSITIF = [
+  {seuil:0,      taux:0.06},
+  {seuil:10000,  taux:0.11},
+  {seuil:20000,  taux:0.16},
+  {seuil:29000,  taux:0.31},
+  {seuil:45000,  taux:0.32},
+  {seuil:60000,  taux:0.33},
+  {seuil:80000,  taux:0.42},
+  {seuil:110000, taux:0.46},
+  {seuil:150000, taux:0.48},
+  {seuil:200000, taux:0.50}
+];
+// Barème dédié aux foyers étrangers (sans socle) : 0 % jusqu'à 24 000 €,
+// puis les taux du barème général sur la fraction excédentaire.
+function impotEtranger(R){
+  if(R <= 24000) return 0;
+  return impotDixTranches(R) - impotDixTranches(24000);
+}
+function impotDixTranches(R){
+  let imp = 0;
+  for(let i=0;i<TRANCHES_DISPOSITIF.length;i++){
+    const s = TRANCHES_DISPOSITIF[i].seuil;
+    const sup = (i<TRANCHES_DISPOSITIF.length-1) ? TRANCHES_DISPOSITIF[i+1].seuil : Infinity;
+    if(R > s) imp += (Math.min(R,sup) - s) * TRANCHES_DISPOSITIF[i].taux;
+  }
+  return imp;
+}
+function dispositif(revenu, situation, enfants, etranger){
+  const adultes = situation === 'couple' ? 2 : 1;
+  let socle = SOCLE_PAR_ADULTE * adultes;
+  // Foyer étranger : pas de socle, barème dédié (0 % jusqu'à 24 000 € par part)
+  if(etranger) socle = 0;
+  const fImpot = etranger ? impotEtranger : impotDixTranches;
+  // CSG-CRDS intégralement déductible : la part non déductible aujourd'hui (2,9 % du brut,
+  // soit ≈ 3,2 % du revenu net imposable) sort de la base taxable du dispositif.
+  const baseImposable = revenu * (1 - 0.032);
+  const partsAvec = parts(situation, enfants);
+  let impotBrut = fImpot(baseImposable / partsAvec) * partsAvec;
+  // Plafonnement de l'avantage du quotient conjugal (miroir du plafonnement enfants actuel) :
+  // l'économie d'impôt apportée par la 2e part conjugale est limitée à PLAFOND_QUOTIENT_CONJUGAL €/an.
+  if(situation === 'couple'){
+    const partsSansConj = partsAvec - 1;
+    const impotSansConj = fImpot(baseImposable / partsSansConj) * partsSansConj;
+    const avantageConjugal = impotSansConj - impotBrut;
+    if(avantageConjugal > PLAFOND_QUOTIENT_CONJUGAL){
+      impotBrut = impotSansConj - PLAFOND_QUOTIENT_CONJUGAL;
+    }
+  }
+  const impotTotal = impotBrut; // pas de décote : le barème démarre à 6 % dès le premier euro, par construction
+  const tva = surcoutTVA(revenu, socle, impotTotal, enfants);
+  const solde = socle - impotTotal - tva;
+  return { socle, impotTotal, tva, solde };
+}
+
+// --- surcoût TVA (taux unique 25 %) : modèle proportionnel à la consommation ---
+// Consommation = revenu disponible × taux de consommation (décroissant avec le revenu,
+// calibré sur les données INSEE par décile : 100 % en bas, 65 % en haut),
+// majorée de 12 % par enfant (échelle d'équivalence simplifiée, plafonnée à +40 %).
+// Surcoût = consommation × 6,5 % (différentiel moyen pondéré du passage à la TVA unique :
+// +16 pts sur ~30 % du panier aujourd'hui à taux réduits, +5 pts sur ~55 % au taux normal,
+// 0 sur ~15 % hors TVA — loyers, santé, assurances).
+const TAUX_SURCOUT_TVA = 0.065;
+function tauxConsommation(dispo){
+  if(dispo <= 15000) return 1.0;
+  if(dispo >= 150000) return 0.65;
+  return 1.0 - 0.35 * (dispo - 15000) / 135000;
+}
+function surcoutTVA(revenu, socle, impot, enfants){
+  const dispo = Math.max(0, revenu + socle - impot);
+  const coefFamille = Math.min(1 + 0.12*enfants, 1.4);
+  const conso = Math.min(dispo * tauxConsommation(dispo) * coefFamille, dispo);
+  return conso * TAUX_SURCOUT_TVA;
+}
+
+let afTouched = false;
+
+// --- préremplissage automatique des aides (barèmes officiels simplifiés) ---
+const touched = { af:false, pa:false, rsa:false };
+
+function coefFamilialRSA(situation, enfants){
+  let c = situation === 'couple' ? 1.5 : 1;
+  for(let i=1;i<=enfants;i++) c += (i<=2) ? 0.3 : 0.4;
+  return c;
+}
+// Forfait logement RSA : appliqué dès qu'une aide au logement est perçue
+function forfaitLogement(situation, enfants, aplMensuel){
+  if(aplMensuel <= 0) return 0;
+  const n = (situation === 'couple' ? 2 : 1) + enfants;
+  return n === 1 ? 72 : (n === 2 ? 145 : 180);
+}
+function estimeRSA(revenu, situation, enfants, afMensuel, aplMensuel){
+  const forfait = 652 * coefFamilialRSA(situation, enfants);
+  const ressources = revenu/12 + afMensuel + forfaitLogement(situation, enfants, aplMensuel);
+  return Math.max(0, forfait - ressources);
+}
+// Prime d'activité : estimation (hypothèse : un seul apporteur de revenu dans le foyer)
+function estimePA(revenu, situation, enfants, afMensuel, aplMensuel){
+  const salaire = revenu/12;
+  if(salaire <= 0) return 0;
+  const forfait = 623 * coefFamilialRSA(situation, enfants);
+  let bonif = 0;
+  if(salaire >= 700) bonif = Math.min(181, (salaire - 700) / (1400 - 700) * 181);
+  const ressources = salaire + afMensuel + forfaitLogement(situation, enfants, aplMensuel);
+  const pa = forfait + 0.61 * salaire + bonif - ressources;
+  return pa >= 15 ? pa : 0;
+}
+
+function prefillAides(){
+  const {situation, enfants, revenu} = state;
+  if(!touched.af){
+    const v = allocationsFamiliales(revenu, enfants) / 12;
+    state.afMensuel = v;
+    document.getElementById('afInput').value = Math.round(v);
+  }
+  if(!touched.rsa){
+    const v = estimeRSA(revenu, situation, enfants, state.afMensuel || 0, state.aplMensuel || 0);
+    state.rsaMensuel = v;
+    document.getElementById('rsaInput').value = Math.round(v);
+  }
+  if(!touched.pa){
+    const v = estimePA(revenu, situation, enfants, state.afMensuel || 0, state.aplMensuel || 0);
+    state.paMensuel = v;
+    document.getElementById('paInput').value = Math.round(v);
+  }
+}
+
+function render(){
+  const {situation, enfants, revenu, zoneTendue, structurel, annee} = state;
+
+  prefillAides();
+
+  const afAnnuel = (state.afMensuel || 0) * 12;
+  const paAnnuel = (state.paMensuel || 0) * 12;
+  const aplAnnuel = (state.aplMensuel || 0) * 12;
+  const rsaAnnuel = (state.rsaMensuel || 0) * 12;
+
+  const actuel = systemeActuel(revenu, situation, enfants, afAnnuel, paAnnuel, aplAnnuel, rsaAnnuel);
+  const disp = dispositif(revenu, situation, enfants, state.etranger);
+
+  // --- mécanismes de protection ---
+  // Perte brute avant protection (positive si le foyer perd)
+  const perteBrute = Math.max(0, actuel.solde - disp.solde);
+
+  // Clause de garantie : couvre la perte.
+  //    Intégrale en année 1, dégressive de 20 %/an,
+  //    sauf situation structurelle reconnue : maintenue sans dégressivité.
+  const resteAPerdre = perteBrute;
+  let coefGarantie;
+  const etrangerAvecEnfants = state.etranger && enfants >= 1; // enfants nés avant la réforme (hypothèse du simulateur)
+  if(structurel || etrangerAvecEnfants){
+    coefGarantie = 1;
+  } else {
+    coefGarantie = Math.max(0, 1 - 0.2*(annee-1));
+  }
+  const garantie = resteAPerdre * coefGarantie;
+
+  const soldeFinal = disp.solde + garantie;
+  const gain = soldeFinal - actuel.solde;
+
+  document.getElementById('impotActuel').textContent = fmt(-actuel.impotNet);
+  document.getElementById('afActuel').textContent = fmt(actuel.af);
+  document.getElementById('paActuel').textContent = fmt(actuel.pa);
+  document.getElementById('aplActuel').textContent = fmt(actuel.apl);
+  document.getElementById('rsaActuel').textContent = fmt(actuel.rsa);
+  document.getElementById('soldeActuel').textContent = fmt(actuel.solde);
+
+  document.getElementById('socleDispositif').textContent = fmt(disp.socle);
+  document.getElementById('impotDispositif').textContent = fmt(-disp.impotTotal);
+  document.getElementById('tvaDispositif').textContent = fmt(-disp.tva);
+  document.getElementById('garantieDispositif').textContent = fmt(garantie);
+  document.getElementById('garantieLabel').textContent = perteBrute <= 0
+    ? 'Clause de garantie'
+    : structurel
+    ? 'Clause de garantie (maintenue — situation structurelle)'
+    : etrangerAvecEnfants
+    ? 'Clause de garantie (maintenue — enfants nés avant la réforme)'
+    : (annee >= 6 ? 'Clause de garantie (éteinte)' : 'Clause de garantie (année ' + annee + ' — ' + Math.round(coefGarantie*100) + ' %)');
+  document.getElementById('soldeDispositif').textContent = fmt(soldeFinal);
+
+  // Sélecteur d'année : sans effet en situation structurelle (garantie maintenue à vie)
+  const anneeSeg = document.getElementById('anneeSeg');
+  if(anneeSeg){
+    anneeSeg.style.opacity = structurel ? '0.35' : '1';
+    anneeSeg.style.pointerEvents = structurel ? 'none' : 'auto';
+  }
+  const anneeHint = document.getElementById('anneeHint');
+  if(anneeHint){
+    anneeHint.textContent = structurel
+      ? 'Situation structurelle reconnue : la clause de garantie est maintenue sans limite de durée — l\'année n\'a plus d\'effet sur le calcul.'
+      : 'La clause de garantie comble intégralement toute perte en année 1, puis diminue de 20 % par an (sauf situation structurelle, où elle est maintenue).';
+  }
+
+  const gainEl = document.getElementById('gainNet');
+  gainEl.textContent = (gain>=0?'+ ':'− ') + fmt(Math.abs(gain)).replace('− ','');
+  gainEl.className = 'balance-amt ' + (gain>=0 ? 'gain':'loss');
+
+  // beam: map gain from -30000..+30000 to 0..100%
+  const clamped = Math.max(-30000, Math.min(30000, gain));
+  const pct = (clamped + 30000) / 60000 * 100;
+  const fill = document.getElementById('beamFill');
+  const dot = document.getElementById('beamDot');
+  if(pct >= 50){
+    fill.style.left = '50%';
+    fill.style.width = (pct-50) + '%';
+  } else {
+    fill.style.left = pct + '%';
+    fill.style.width = (50-pct) + '%';
+  }
+  dot.style.left = pct + '%';
+}
+
+// --- interactions ---
+document.querySelectorAll('#situationSeg button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#situationSeg button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.situation = btn.dataset.val;
+    render();
+  });
+});
+
+document.getElementById('inc').addEventListener('click', ()=>{
+  state.enfants = Math.min(8, state.enfants+1);
+  document.getElementById('enfantsCount').textContent = state.enfants;
+  document.getElementById('dec').disabled = false;
+  render();
+});
+document.getElementById('dec').addEventListener('click', ()=>{
+  state.enfants = Math.max(0, state.enfants-1);
+  document.getElementById('enfantsCount').textContent = state.enfants;
+  document.getElementById('dec').disabled = state.enfants===0;
+  render();
+});
+document.getElementById('dec').disabled = true;
+
+const slider = document.getElementById('revenuSlider');
+slider.addEventListener('input', ()=>{
+  state.revenu = parseInt(slider.value);
+  document.getElementById('revenuValue').textContent = fmt(state.revenu);
+  render();
+});
+
+document.getElementById('afInput').addEventListener('input', (e)=>{
+  touched.af = true;
+  state.afMensuel = parseFloat(e.target.value) || 0;
+  render();
+});
+document.getElementById('paInput').addEventListener('input', (e)=>{
+  touched.pa = true;
+  state.paMensuel = parseFloat(e.target.value) || 0;
+  render();
+});
+document.getElementById('aplInput').addEventListener('input', (e)=>{
+  state.aplMensuel = parseFloat(e.target.value) || 0;
+  render(); // le RSA et la PA estimés se recalculent (forfait logement)
+});
+document.getElementById('rsaInput').addEventListener('input', (e)=>{
+  touched.rsa = true;
+  state.rsaMensuel = parseFloat(e.target.value) || 0;
+  render();
+});
+
+
+
+document.getElementById('structToggle').addEventListener('click', (e)=>{
+  state.structurel = !state.structurel;
+  e.target.classList.toggle('active', state.structurel);
+  render();
+});
+document.querySelectorAll('#anneeSeg button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#anneeSeg button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.annee = parseInt(btn.dataset.annee);
+    render();
+  });
+});
+
+
+const garantiePanel = document.getElementById('garantiePanel');
+document.getElementById('garantieBtn').addEventListener('click', ()=>{
+  garantiePanel.style.display = garantiePanel.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('fr-FR', {year:'numeric', month:'long'});
+
+render();
+</script></body>
+</html>
